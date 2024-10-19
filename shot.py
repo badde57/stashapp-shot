@@ -3,7 +3,7 @@ import sys
 import json
 import sqlite3
 
-METHOD = 'shot-1.0.0'
+METHOD = 'shot-1.0.2'
 
 per_page = 10
 
