@@ -1,0 +1,3 @@
+[submodule "transnetv2pt"]
+	path = transnetv2pt
+	url = https://github.com/badde57/transnetv2pt.git

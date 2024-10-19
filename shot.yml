@@ -1,0 +1,14 @@
+name: shot
+description: Calculates scene-level shot boundaries
+version: '1.0.0'
+url: https://github.com/badde57/stashapp-shot
+exec:
+  - python
+  - "{pluginDir}/shot.py"
+  - "{pluginDir}/../../../meta.sqlite"
+interface: raw
+tasks:
+  - name: SBD scenes
+    description: Calculate scene-level shot boundaries
+    defaultArgs:
+      mode: catchup
