@@ -1,6 +1,6 @@
 name: shot
 description: Calculates scene-level shot boundaries
-version: '1.0.2'
+version: '1.0.4'
 url: https://github.com/badde57/stashapp-shot
 exec:
   - python

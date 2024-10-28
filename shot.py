@@ -3,7 +3,7 @@ import sys
 import json
 import sqlite3
 
-METHOD = 'shot-1.0.2'
+METHOD = 'shot-1.0.4'
 
 per_page = 10
 
@@ -91,7 +91,7 @@ def checkshot(scene):
             frame_prob = t[2]
             time_duration = int(100 * (frame_end - frame_start) / fps) / 100
             time_offset = int(100 * frame_start / fps) / 100
-            cur.execute('INSERT INTO shot (endpoint, stash_id, time_offset, time_duration, score, method) VALUES (?,?,?,?,?,?)',(endpoint, stash_id, time_offset, time_duration, frame_prob, METHOD,))
+            cur.execute('INSERT OR IGNORE INTO shot (endpoint, stash_id, time_offset, time_duration, score, method) VALUES (?,?,?,?,?,?)',(endpoint, stash_id, time_offset, time_duration, frame_prob, METHOD,))
             #if frame_start % 1000 == 0:
             #    log.debug(f'phash - {scene_id=}, {file_id=}, frame: {frame_start}/{total_frames}, phash={curr_hash=}')
         # TODO insert final segment
