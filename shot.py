@@ -49,54 +49,50 @@ def catchup():
         log.info('fetching data: %s - %s %0.1f%%' % ((r - 1) * per_page,r * per_page,(i/count)*100,))
         scenes=stash.find_scenes(f=f,filter={"page":r,"per_page": 1, "sort": "duration", "direction": "ASC"})
         for s in scenes:
-            if "stash_ids" not in s.keys() or len(s["stash_ids"]) != 1:
-                log.error(f"Scene {s['id']} must have exactly one stash_id, skipping...")
+            if "stash_ids" not in s.keys():
+                log.error(f"Scene {s['id']} must at least one stash_id, skipping...")
                 continue
+            elif len(s['files']) != 1:
+                log.error(f"Scene {s['id']} must have exactly one file, skipping...")
+                continue
+
             result = checkshot(s)
             i=i+1
             log.progress((i/count))
             #time.sleep(2)
 
 def checkshot(scene):
-    #log.info(scene)
+    file = scene['files'][0]
 
-    if len(scene['files']) != 1:
-        log.error(f"Scene {s['id']} must have exactly one file, skipping...")
-        return
+    scene_id = scene['id']
+    path = file['path']
+    file_id = file['id']
+    fps = float(file['frame_rate'])
+    dur = float(file['duration'])
+    log.debug(f'processing {scene_id=}...')
+    endpoint = scene['stash_ids'][0]['endpoint']
+    stash_id = scene['stash_ids'][0]['stash_id']
 
-    for file in scene['files']:
-        scene_id = scene['id']
-        path = file['path']
-        file_id = file['id']
-        fps = float(file['frame_rate'])
-        dur = float(file['duration'])
-        log.debug(f'processing {scene_id=}...')
-        endpoint = scene['stash_ids'][0]['endpoint']
-        stash_id = scene['stash_ids'][0]['stash_id']
+    cur = con.cursor()
+    cur.execute("SELECT COUNT(*) AS c FROM shot WHERE endpoint = ? AND stash_id = ?",(endpoint, stash_id,))
+    rows = cur.fetchall()
+    if len(rows) > 0:
+        frame_count = int(rows[0][0])
+        if frame_count > 100:
+            log.debug(f"shot - skipping {scene_id=}, {frame_count=}")
+            return
 
-        cur = con.cursor()
-        cur.execute("SELECT COUNT(*) AS c FROM shot WHERE endpoint = ? AND stash_id = ?",(endpoint, stash_id,))
-        rows = cur.fetchall()
-        if len(rows) > 0:
-            frame_count = int(rows[0][0])
-            if frame_count > 100:
-                log.debug(f"shot - skipping {scene_id=}, {frame_count=}")
-                continue
-
-        # CREATE TABLE phash( endpoint TEXT NOT NULL, stash_id TEXT NOT NULL, time_offset float not null, time_duration float not null, phash CHAR(12) NOT NULL, method TEXT NOT NULL, unique (stash_id, time_offset, method));
-        scenes = predict_video(path, probs=True)
-        for i, t in enumerate(scenes):
-            frame_start = t[0]
-            frame_end = t[1]
-            frame_prob = t[2]
-            time_duration = int(100 * (frame_end - frame_start) / fps) / 100
-            time_offset = int(100 * frame_start / fps) / 100
-            cur.execute('INSERT OR IGNORE INTO shot (endpoint, stash_id, time_offset, time_duration, score, method) VALUES (?,?,?,?,?,?)',(endpoint, stash_id, time_offset, time_duration, frame_prob, METHOD,))
-            #if frame_start % 1000 == 0:
-            #    log.debug(f'phash - {scene_id=}, {file_id=}, frame: {frame_start}/{total_frames}, phash={curr_hash=}')
-        # TODO insert final segment
-        log.debug(f"shot - finished {scene_id=}")
-        return con.commit()
+    shots = predict_video(path, probs=True)
+    for i, t in enumerate(shots):
+        frame_start = t[0]
+        frame_end = t[1]
+        frame_prob = t[2]
+        time_duration = int(100 * (frame_end - frame_start) / fps) / 100
+        time_offset = int(100 * frame_start / fps) / 100
+        cur.execute('INSERT OR IGNORE INTO shot (endpoint, stash_id, time_offset, time_duration, score, method) VALUES (?,?,?,?,?,?)',(endpoint, stash_id, time_offset, time_duration, frame_prob, METHOD,))
+    # TODO insert final segment
+    log.debug(f"shot - finished {scene_id=}")
+    return con.commit()
 
 def main():
     global stash
